@@ -1,0 +1,3 @@
+{
+  "pattern": "history-{start}_to_{end}.json"
+}
