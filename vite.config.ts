@@ -2,10 +2,19 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import fs from 'node:fs'
 import path from 'node:path'
+import { buildDefaultTasks } from './src/config/releaseTasks'
+import { RELEASE_COORDINATOR_ROSTER } from './src/config/releaseLinks'
 
 const formatDate = (date: Date) => {
   const pad = (value: number) => String(value).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+const formatDateTime = (date: Date) => {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate(),
+  )} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 const getWeekRange = (now: Date) => {
@@ -36,6 +45,14 @@ const getHistoryPattern = (root: string) => {
 
 const buildHistoryFileName = (pattern: string, startDate: string, endDate: string) =>
   pattern.replace('{start}', startDate).replace('{end}', endDate)
+
+const readJsonBody = (req: { on: (event: string, cb: (chunk: Buffer) => void) => void }, cb: (body: string) => void) => {
+  let body = ''
+  req.on('data', (chunk) => {
+    body += chunk.toString()
+  })
+  req.on('end', () => cb(body))
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -68,11 +85,15 @@ export default defineConfig({
             const payload = {
               weekStart: startDate,
               weekEnd: endDate,
-              generatedAt: new Date().toISOString(),
-              tasks: [],
+              generatedAt: formatDateTime(new Date()),
+              releaseCoordinatorRoster: RELEASE_COORDINATOR_ROSTER,
+              releaseCaptains: [],
+              tasks: buildDefaultTasks(),
             }
             fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf-8')
           }
+
+          const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
 
           res.statusCode = 200
           res.setHeader('Content-Type', 'application/json')
@@ -81,6 +102,7 @@ export default defineConfig({
               path: `src/historical/${fileName}`,
               fileName,
               existed: exists,
+              data,
             }),
           )
         })
@@ -100,6 +122,7 @@ export default defineConfig({
           const fileName = buildHistoryFileName(pattern, startDate, endDate)
           const filePath = path.join(historyDir, fileName)
           const exists = fs.existsSync(filePath)
+          const data = exists ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : null
 
           res.statusCode = 200
           res.setHeader('Content-Type', 'application/json')
@@ -108,8 +131,76 @@ export default defineConfig({
               path: `src/historical/${fileName}`,
               fileName,
               existed: exists,
+              data,
             }),
           )
+        })
+
+        server.middlewares.use('/api/history/update', (req, res, next) => {
+          if (req.method !== 'POST') {
+            next()
+            return
+          }
+
+          readJsonBody(req, (body) => {
+            const root = server.config.root ?? process.cwd()
+            const historyDir = path.join(root, 'src', 'historical')
+            fs.mkdirSync(historyDir, { recursive: true })
+
+            const { startDate, endDate } = getWeekRange(new Date())
+            const pattern = getHistoryPattern(root)
+            const fileName = buildHistoryFileName(pattern, startDate, endDate)
+            const filePath = path.join(historyDir, fileName)
+            const exists = fs.existsSync(filePath)
+
+            const payload = exists
+              ? JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+              : {
+                  weekStart: startDate,
+                  weekEnd: endDate,
+                  generatedAt: formatDateTime(new Date()),
+                  releaseCoordinatorRoster: RELEASE_COORDINATOR_ROSTER,
+                  releaseCaptains: [],
+                  tasks: buildDefaultTasks(),
+                }
+
+            try {
+              const parsed = body
+                ? (JSON.parse(body) as {
+                    releaseCaptain?: string
+                    releaseCaptains?: string[]
+                    tasks?: unknown
+                  })
+                : {}
+              if (Array.isArray(parsed.tasks)) {
+                payload.tasks = parsed.tasks
+              }
+              if (Array.isArray(parsed.releaseCaptains)) {
+                payload.releaseCaptains = parsed.releaseCaptains
+                  .map((name) => name.trim())
+                  .filter(Boolean)
+              }
+              if (typeof parsed.releaseCaptain === 'string') {
+                const value = parsed.releaseCaptain.trim()
+                payload.releaseCaptains = value ? [value] : []
+              }
+            } catch {
+              // ignore parse errors
+            }
+
+            fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf-8')
+
+            res.statusCode = 200
+            res.setHeader('Content-Type', 'application/json')
+            res.end(
+              JSON.stringify({
+                path: `src/historical/${fileName}`,
+                fileName,
+                existed: exists,
+                data: payload,
+              }),
+            )
+          })
         })
       },
     },

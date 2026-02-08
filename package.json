@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "vite",
-    "start:dev": "set VITE_TIME_TRAVEL=1 && vite",
+    "start:prod": "vite build && vite preview",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
