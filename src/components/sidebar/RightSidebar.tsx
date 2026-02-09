@@ -57,17 +57,18 @@ export default function RightSidebar({
     const day = currentDate.getDay()
     const hour = currentDate.getHours()
     const list: string[] = []
+    const hasMtpRequired = tasks.some((task) => Boolean(task.metadata?.mtpRequired))
     if (day === 2 && hour < 12) {
       list.push('Join UAT meeting 10:00 AM')
     }
     if (day === 2 && hour >= 12 && hour < 18) {
       list.push('Join KT Meeting 4:00 PM')
     }
-    if (day === 3 && hour < 12) {
+    if (day === 3 && hour < 12 && hasMtpRequired) {
       list.push('Join CAB Meeting 10:00 AM')
     }
     return list
-  }, [currentDate])
+  }, [currentDate, tasks])
 
   return (
     <aside className="space-y-4">

@@ -48,7 +48,7 @@ export const taskDefinitions: TaskDefinition[] = [
       },
       {
         id: 'create-cr-cab',
-        title: '#1-2 Join CAB meeting on Thursday 10:00 AM',
+        title: '#1-2 Join CAB meeting on Wednesday 10:00 AM',
       },
       {
         id: 'create-cr-mtp',
