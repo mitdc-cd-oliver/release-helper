@@ -1,0 +1,94 @@
+{
+  "weekStart": "2026-02-09",
+  "weekEnd": "2026-02-15",
+  "generatedAt": "2026-02-09 11:26:19",
+  "releaseCoordinatorRoster": {
+    "label": "2026 WRS Release Coordinator Roster",
+    "url": "https://manulife-gwam.atlassian.net/wiki/x/AI6ZIw"
+  },
+  "releaseCaptains": [
+    "Sunil Kishore Khiatani"
+  ],
+  "tasks": [
+    {
+      "id": "create-cr",
+      "title": "#1 Create CR(Change Request)",
+      "status": "In progress",
+      "metadata": {
+        "crTicketNumber": "CHG01306023",
+        "crTicketLink": "https://manulife.service-now.com/now/nav/ui/classic/params/target/change_request.do%3Fsys_id%3D3cee0e4cff4776904b51f5228c4fd9d6%26sysparm_record_target%3Dchange_request%26sysparm_record_row%3D1%26sysparm_record_rows%3D2%26sysparm_record_list%3Dactive%253Dtrue%255Eopened_by%253Djavascript%253Ags.getUserID%2528%2529%255EORDERBYDESCsys_created_on",
+        "scheduledReleaseLink": "https://manulife-gwam.atlassian.net/projects/AWAMWRS/versions/33399/tab/release-report-all-issues",
+        "changeType": "Normal-Minor",
+        "mtpRequired": true
+      }
+    },
+    {
+      "id": "create-readiness-ticket",
+      "title": "#2 Create Readiness Ticket",
+      "status": "In progress",
+      "metadata": {
+        "readinessTicketNumber": "AWAMWRS-9458",
+        "readinessTicketLink": "https://manulife-gwam.atlassian.net/browse/AWAMWRS-9458"
+      }
+    },
+    {
+      "id": "update-release-coordinator-roster",
+      "title": "#3 Update Release Coordinator Roster",
+      "status": "In progress"
+    },
+    {
+      "id": "roster-uat-meeting",
+      "title": "#3-1 UAT Meeting on Tuesday 10:00 AM",
+      "status": "Not started",
+      "parentId": "update-release-coordinator-roster"
+    },
+    {
+      "id": "roster-kt-meeting",
+      "title": "#3-2 KT Meeting on Tuesday 4:00 PM",
+      "status": "Not started",
+      "parentId": "update-release-coordinator-roster"
+    },
+    {
+      "id": "roster-release-approval-email",
+      "title": "#3-3 Send require release approval email",
+      "status": "Not started",
+      "parentId": "update-release-coordinator-roster"
+    },
+    {
+      "id": "roster-piv-approval-email",
+      "title": "#3-4 Send require PIV approval email",
+      "status": "Not started",
+      "parentId": "update-release-coordinator-roster"
+    },
+    {
+      "id": "create-cr-authorize",
+      "title": "#1-1 Move CR to Authorize state before 12pm on Tuesday",
+      "status": "Not started",
+      "parentId": "create-cr"
+    },
+    {
+      "id": "create-cr-cab",
+      "title": "#1-2 Join CAB meeting on Thursday 10:00 AM",
+      "status": "Not started",
+      "parentId": "create-cr"
+    },
+    {
+      "id": "create-cr-mtp",
+      "title": "#1-3 MTP",
+      "status": "Not started",
+      "parentId": "create-cr"
+    },
+    {
+      "id": "readiness-uat",
+      "title": "#2-1 UAT",
+      "status": "Not started",
+      "parentId": "create-readiness-ticket"
+    },
+    {
+      "id": "readiness-nft",
+      "title": "#2-2 NFT",
+      "status": "Not started",
+      "parentId": "create-readiness-ticket"
+    }
+  ]
+}
