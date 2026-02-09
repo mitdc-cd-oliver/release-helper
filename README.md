@@ -11,18 +11,7 @@ Tooling to help the **release captain** run the **weekly WRS release** with a cl
 ## Getting Started
 ```bash
 npm install
-npm run start:dev
-```
-
-## Run the App
-### Local (non-dev preview)
-```bash
 npm run start
-```
-
-### Dev (with time-travel + dev-only loading delay)
-```bash
-npm run start:dev
 ```
 
 ### Prod preview (build + preview)
