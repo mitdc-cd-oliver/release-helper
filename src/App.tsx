@@ -7,7 +7,7 @@ import ChangeTypeModal from './components/modals/ChangeTypeModal'
 import TaskRequirementModal from './components/modals/TaskRequirementModal'
 import SideNav from './components/layout/SideNav'
 import RightSidebar from './components/sidebar/RightSidebar'
-import { buildDefaultTasks, getTaskDefinition } from './config/releaseTasks'
+import { buildDefaultTasks, getTaskDefinition, taskDefinitions } from './config/releaseTasks'
 import {
   NORMAL_CHANGE_REQUEST,
   RELEASE_COORDINATOR_ROSTER,
@@ -176,10 +176,12 @@ function App() {
     }
 
     if (status === 'Done') {
+      const definition = getTaskDefinition(taskId)
+      const allowDoneWithIncompleteChildren = definition?.allowDoneWithIncompleteChildren ?? false
       const hasIncompleteChildren = tasks.some(
         (task) => task.parentId === currentTask.id && task.status !== 'Done',
       )
-      if (hasIncompleteChildren) {
+      if (hasIncompleteChildren && !allowDoneWithIncompleteChildren) {
         setStartStatus('error')
         setStartMessage('Complete all subtasks before finishing this task')
         return
@@ -337,6 +339,16 @@ function App() {
     })
     return entries
   }, [tasks])
+
+  const allowDoneWithIncompleteChildrenById = useMemo(() => {
+    const entries: Record<string, boolean> = {}
+    taskDefinitions.forEach((task) => {
+      if (task.allowDoneWithIncompleteChildren) {
+        entries[task.id] = true
+      }
+    })
+    return entries
+  }, [])
 
   useEffect(() => {
     startStatusRef.current = startStatus
@@ -560,6 +572,7 @@ function App() {
                 <Checklist
                   items={[...tasks]}
                   parentTitleById={taskTitleById}
+                  allowDoneWithIncompleteChildrenById={allowDoneWithIncompleteChildrenById}
                   onMove={handleMove}
                 />
                 <RightSidebar

@@ -5,6 +5,7 @@ type ChecklistProps = {
   items: TaskItem[]
   onMove: (taskId: string, status: TaskStatus) => void
   parentTitleById: Record<string, string>
+  allowDoneWithIncompleteChildrenById: Record<string, boolean>
 }
 
 const STATUS_LABELS: TaskStatus[] = [
@@ -19,7 +20,12 @@ const STATUS_TITLES: Record<TaskStatus, string> = {
   Done: 'Done',
 }
 
-export default function Checklist({ items, onMove, parentTitleById }: ChecklistProps) {
+export default function Checklist({
+  items,
+  onMove,
+  parentTitleById,
+  allowDoneWithIncompleteChildrenById,
+}: ChecklistProps) {
   const [activeStatus, setActiveStatus] = useState<TaskStatus | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [draggingOverId, setDraggingOverId] = useState<string | null>(null)
@@ -159,6 +165,11 @@ export default function Checklist({ items, onMove, parentTitleById }: ChecklistP
                       {item.metadata?.crTicketNumber && (
                         <p className="text-xs text-violet-200">
                           CR: {item.metadata.crTicketNumber}
+                        </p>
+                      )}
+                      {allowDoneWithIncompleteChildrenById[item.id] && (
+                        <p className="text-xs text-amber-300">
+                          允许直接完成（子任务可未完成）
                         </p>
                       )}
                     </div>

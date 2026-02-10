@@ -12,6 +12,7 @@ export type TaskDefinition = {
   defaultStatus?: TaskStatus
   requirement?: TaskRequirement
   onInProgressChildren?: Array<Pick<TaskDefinition, 'id' | 'title'>>
+  allowDoneWithIncompleteChildren?: boolean
 }
 
 export type TaskItem = {
@@ -67,8 +68,9 @@ export const taskDefinitions: TaskDefinition[] = [
   {
     id: 'update-release-coordinator-roster',
     title: '#3 Update Release Coordinator Roster',
+    allowDoneWithIncompleteChildren: true,
     onInProgressChildren: [
-      { id: 'roster-uat-meeting', title: '#3-1 UAT Meeting on Tuesday 10:00 AM' },
+      { id: 'roster-uat-meeting', title: '#3-1 UAT Meeting on Tuesday 11:00 AM' },
       { id: 'roster-kt-meeting', title: '#3-2 KT Meeting on Tuesday 4:00 PM' },
       { id: 'roster-release-approval-email', title: '#3-3 Send require release approval email' },
       { id: 'roster-piv-approval-email', title: '#3-4 Send require PIV approval email' },
