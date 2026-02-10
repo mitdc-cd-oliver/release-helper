@@ -381,6 +381,27 @@ function App() {
     })
   }
 
+  const handleEditReadinessTicket = (taskId: string) => {
+    const currentTask = tasks.find((task) => task.id === taskId)
+    if (!currentTask) {
+      return
+    }
+    if (taskId !== 'create-readiness-ticket') {
+      return
+    }
+    setRequirementValue(currentTask.metadata?.readinessTicketNumber || '')
+    setRequirementLinkValue(currentTask.metadata?.readinessTicketLink || '')
+    setScheduledReleaseLinkValue('')
+    setRequirementModal({
+      taskId,
+      status: 'In progress',
+      requirementLabel: 'Ticket Number',
+      instructionLabel: RELEASE_READINESS_GUIDE.label,
+      instructionUrl: RELEASE_READINESS_GUIDE.url,
+      metadataKey: 'readiness',
+    })
+  }
+
   const taskTitleById = useMemo(() => {
     const entries: Record<string, string> = {}
     tasks.forEach((task) => {
@@ -626,6 +647,7 @@ function App() {
                   allowDoneWithIncompleteChildrenById={allowDoneWithIncompleteChildrenById}
                   onMove={handleMove}
                   onEditCrTicket={handleEditCrTicket}
+                  onEditReadinessTicket={handleEditReadinessTicket}
                 />
                 <RightSidebar
                   isInWindow={isInWindow}

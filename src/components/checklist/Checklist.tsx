@@ -7,6 +7,7 @@ type ChecklistProps = {
   parentTitleById: Record<string, string>
   allowDoneWithIncompleteChildrenById: Record<string, boolean>
   onEditCrTicket?: (taskId: string) => void
+  onEditReadinessTicket?: (taskId: string) => void
 }
 
 const STATUS_LABELS: TaskStatus[] = [
@@ -27,6 +28,7 @@ export default function Checklist({
   parentTitleById,
   allowDoneWithIncompleteChildrenById,
   onEditCrTicket,
+  onEditReadinessTicket,
 }: ChecklistProps) {
   const [activeStatus, setActiveStatus] = useState<TaskStatus | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -190,15 +192,21 @@ export default function Checklist({
 
                   <div className="flex items-center justify-between text-[11px] text-slate-500">
                     <span>{item.status === 'Done' ? 'Locked' : 'Drag to move'}</span>
-                    {item.id === 'create-cr' && item.status === 'In progress' && (
-                      <span className="text-amber-300">Editable ticket info</span>
-                    )}
                   </div>
                   {item.id === 'create-cr' && item.status === 'In progress' && (
                     <button
                       type="button"
                       className="text-xs text-violet-300 hover:text-violet-200"
                       onClick={() => onEditCrTicket?.(item.id)}
+                    >
+                      Edit ticket info
+                    </button>
+                  )}
+                  {item.id === 'create-readiness-ticket' && item.status === 'In progress' && (
+                    <button
+                      type="button"
+                      className="text-xs text-violet-300 hover:text-violet-200"
+                      onClick={() => onEditReadinessTicket?.(item.id)}
                     >
                       Edit ticket info
                     </button>
