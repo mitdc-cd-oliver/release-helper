@@ -6,6 +6,7 @@ type ChecklistProps = {
   onMove: (taskId: string, status: TaskStatus) => void
   parentTitleById: Record<string, string>
   allowDoneWithIncompleteChildrenById: Record<string, boolean>
+  onEditCrTicket?: (taskId: string) => void
 }
 
 const STATUS_LABELS: TaskStatus[] = [
@@ -25,6 +26,7 @@ export default function Checklist({
   onMove,
   parentTitleById,
   allowDoneWithIncompleteChildrenById,
+  onEditCrTicket,
 }: ChecklistProps) {
   const [activeStatus, setActiveStatus] = useState<TaskStatus | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -169,7 +171,7 @@ export default function Checklist({
                       )}
                       {allowDoneWithIncompleteChildrenById[item.id] && (
                         <p className="text-xs text-amber-300">
-                          允许直接完成（子任务可未完成）
+                          Can complete without finishing subtasks
                         </p>
                       )}
                     </div>
@@ -186,9 +188,21 @@ export default function Checklist({
                     </span>
                   </div>
 
-                  <div className="text-[11px] text-slate-500">
-                    {item.status === 'Done' ? 'Locked' : 'Drag to move'}
+                  <div className="flex items-center justify-between text-[11px] text-slate-500">
+                    <span>{item.status === 'Done' ? 'Locked' : 'Drag to move'}</span>
+                    {item.id === 'create-cr' && item.status === 'In progress' && (
+                      <span className="text-amber-300">Editable ticket info</span>
+                    )}
                   </div>
+                  {item.id === 'create-cr' && item.status === 'In progress' && (
+                    <button
+                      type="button"
+                      className="text-xs text-violet-300 hover:text-violet-200"
+                      onClick={() => onEditCrTicket?.(item.id)}
+                    >
+                      Edit ticket info
+                    </button>
+                  )}
                 </div>
               ))
             )}

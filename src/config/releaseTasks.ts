@@ -23,6 +23,8 @@ export type TaskItem = {
   metadata?: {
     crTicketNumber?: string
     crTicketLink?: string
+    mtpCrTicketNumber?: string
+    mtpCrTicketLink?: string
     changeType?: 'Standard-BAU' | 'Normal-Minor' | 'Normal-Medium'
     mtpRequired?: boolean
     scheduledReleaseLink?: string

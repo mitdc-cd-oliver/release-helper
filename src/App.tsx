@@ -84,6 +84,8 @@ function App() {
   >(null)
   const [requirementValue, setRequirementValue] = useState('')
   const [requirementLinkValue, setRequirementLinkValue] = useState('')
+  const [mtpCrTicketNumber, setMtpCrTicketNumber] = useState('')
+  const [mtpCrTicketLink, setMtpCrTicketLink] = useState('')
   const [scheduledReleaseLinkValue, setScheduledReleaseLinkValue] = useState('')
   const [activeView, setActiveView] = useState<'current' | 'history'>('current')
   const [changeTypeModalOpen, setChangeTypeModalOpen] = useState(false)
@@ -247,6 +249,8 @@ function App() {
     setRequirementModal(null)
     setRequirementValue('')
     setRequirementLinkValue('')
+    setMtpCrTicketNumber('')
+    setMtpCrTicketLink('')
     setSelectedChangeType('')
     setScheduledReleaseLinkValue('')
   }
@@ -270,11 +274,16 @@ function App() {
       if (requirementModal.taskId === 'create-cr' && !scheduledLinkValue) {
         return
       }
+      const trimmedMtpNumber = mtpCrTicketNumber.trim()
+      const trimmedMtpLink = mtpCrTicketLink.trim()
+      const mtpEnabled = changeTypeOptions.includes('MTP')
       applyTaskStatus(requirementModal.taskId, requirementModal.status, {
         ...(requirementModal.metadataKey === 'cr'
           ? {
               crTicketNumber: value,
               crTicketLink: linkValue,
+              mtpCrTicketNumber: mtpEnabled ? trimmedMtpNumber || undefined : undefined,
+              mtpCrTicketLink: mtpEnabled ? trimmedMtpLink || undefined : undefined,
               scheduledReleaseLink:
                 requirementModal.taskId === 'create-cr' ? scheduledLinkValue : undefined,
               changeType:
@@ -295,6 +304,8 @@ function App() {
     setRequirementModal(null)
     setRequirementValue('')
     setRequirementLinkValue('')
+    setMtpCrTicketNumber('')
+    setMtpCrTicketLink('')
     setSelectedChangeType('')
     setScheduledReleaseLinkValue('')
   }
@@ -313,11 +324,16 @@ function App() {
         ? STANDARD_CHANGE_REQUEST.url
         : NORMAL_CHANGE_REQUEST.url
     window.open(link, '_blank', 'noopener,noreferrer')
+    if (changeTypeOptions.includes('MTP') && selectedChangeType !== 'Standard-BAU') {
+      window.open(STANDARD_CHANGE_REQUEST.url, '_blank', 'noopener,noreferrer')
+    }
     const requirement = getTaskDefinition(pendingTaskId)?.requirement
     if (requirement?.type === 'cr-ticket') {
       const currentTask = tasks.find((task) => task.id === pendingTaskId)
       setRequirementValue(currentTask?.metadata?.crTicketNumber || '')
       setRequirementLinkValue(currentTask?.metadata?.crTicketLink || '')
+      setMtpCrTicketNumber(currentTask?.metadata?.mtpCrTicketNumber || '')
+      setMtpCrTicketLink(currentTask?.metadata?.mtpCrTicketLink || '')
       setScheduledReleaseLinkValue(currentTask?.metadata?.scheduledReleaseLink || '')
       setRequirementModal({
         taskId: pendingTaskId,
@@ -330,6 +346,38 @@ function App() {
     }
     setChangeTypeModalOpen(false)
     setPendingTaskId(null)
+  }
+
+  const handleEditCrTicket = (taskId: string) => {
+    const currentTask = tasks.find((task) => task.id === taskId)
+    if (!currentTask) {
+      return
+    }
+    const requirement = getTaskDefinition(taskId)?.requirement
+    if (!requirement || requirement.type !== 'cr-ticket') {
+      return
+    }
+    const changeType = currentTask.metadata?.changeType ?? ''
+    const isMtpRequired = Boolean(currentTask.metadata?.mtpRequired)
+    const link =
+      changeType === 'Standard-BAU' || changeType === ''
+        ? STANDARD_CHANGE_REQUEST.url
+        : NORMAL_CHANGE_REQUEST.url
+    setSelectedChangeType(changeType)
+    setChangeTypeOptions(isMtpRequired ? ['MTP'] : [])
+    setRequirementValue(currentTask.metadata?.crTicketNumber || '')
+    setRequirementLinkValue(currentTask.metadata?.crTicketLink || '')
+    setMtpCrTicketNumber(currentTask.metadata?.mtpCrTicketNumber || '')
+    setMtpCrTicketLink(currentTask.metadata?.mtpCrTicketLink || '')
+    setScheduledReleaseLinkValue(currentTask.metadata?.scheduledReleaseLink || '')
+    setRequirementModal({
+      taskId,
+      status: 'In progress',
+      requirementLabel: requirement.label,
+      helperLinkLabel: 'Create new ticket',
+      helperLinkUrl: link,
+      metadataKey: 'cr',
+    })
   }
 
   const taskTitleById = useMemo(() => {
@@ -574,6 +622,7 @@ function App() {
                   parentTitleById={taskTitleById}
                   allowDoneWithIncompleteChildrenById={allowDoneWithIncompleteChildrenById}
                   onMove={handleMove}
+                  onEditCrTicket={handleEditCrTicket}
                 />
                 <RightSidebar
                   isInWindow={isInWindow}
@@ -603,9 +652,16 @@ function App() {
         onChange={setRequirementValue}
         linkValue={requirementLinkValue}
         onLinkChange={setRequirementLinkValue}
+        mtpNumberValue={mtpCrTicketNumber}
+        onMtpNumberChange={setMtpCrTicketNumber}
+        mtpLinkValue={mtpCrTicketLink}
+        onMtpLinkChange={setMtpCrTicketLink}
         scheduledLinkValue={scheduledReleaseLinkValue}
         onScheduledLinkChange={setScheduledReleaseLinkValue}
         showScheduledLink={requirementModal?.taskId === 'create-cr'}
+        showMtpCrFields={
+          requirementModal?.taskId === 'create-cr' && changeTypeOptions.includes('MTP')
+        }
         onCancel={handleRequirementCancel}
         onConfirm={handleRequirementConfirm}
         confirmDisabled={

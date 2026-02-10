@@ -36,6 +36,8 @@ export default function RightSidebar({
           id: task.id,
           number: task.metadata?.crTicketNumber ?? '',
           link: task.metadata?.crTicketLink ?? '',
+          mtpNumber: task.metadata?.mtpCrTicketNumber || task.metadata?.crTicketNumber || '',
+          mtpLink: task.metadata?.mtpCrTicketLink || task.metadata?.crTicketLink || '',
           changeType: task.metadata?.changeType ?? '',
           mtpRequired: Boolean(task.metadata?.mtpRequired),
           scheduledReleaseLink: task.metadata?.scheduledReleaseLink ?? '',
@@ -215,6 +217,23 @@ export default function RightSidebar({
                           {ticket.number}
                         </a>
                       </div>
+                      {ticket.mtpRequired && (
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                          <span className="text-slate-400">MTP CR:</span>
+                          {ticket.mtpLink ? (
+                            <a
+                              className="text-violet-300 hover:text-violet-200"
+                              href={ticket.mtpLink}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {ticket.mtpNumber || 'Open'}
+                            </a>
+                          ) : (
+                            <span className="text-slate-200">{ticket.mtpNumber || '—'}</span>
+                          )}
+                        </div>
+                      )}
                       <div className="mt-1 text-[11px] text-slate-400">
                         Change Type: <span className="text-slate-200">{ticket.changeType || '—'}</span>
                       </div>

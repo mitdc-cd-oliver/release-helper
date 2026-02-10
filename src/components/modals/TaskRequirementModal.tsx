@@ -12,9 +12,14 @@ type TaskRequirementModalProps = {
   onChange: (value: string) => void
   linkValue: string
   onLinkChange: (value: string) => void
+  mtpNumberValue?: string
+  onMtpNumberChange?: (value: string) => void
+  mtpLinkValue?: string
+  onMtpLinkChange?: (value: string) => void
   scheduledLinkValue?: string
   onScheduledLinkChange?: (value: string) => void
   showScheduledLink?: boolean
+  showMtpCrFields?: boolean
   onCancel: () => void
   onConfirm: () => void
   confirmDisabled?: boolean
@@ -34,9 +39,14 @@ export default function TaskRequirementModal({
   onChange,
   linkValue,
   onLinkChange,
+  mtpNumberValue,
+  onMtpNumberChange,
+  mtpLinkValue,
+  onMtpLinkChange,
   scheduledLinkValue,
   onScheduledLinkChange,
   showScheduledLink = false,
+  showMtpCrFields = false,
   onCancel,
   onConfirm,
   confirmDisabled = false,
@@ -89,6 +99,30 @@ export default function TaskRequirementModal({
               value={linkValue}
               onChange={(event) => onLinkChange(event.target.value)}
             />
+            {showMtpCrFields && (
+              <>
+                <label className="mt-4 block text-[11px] uppercase tracking-[0.2em] text-violet-300">
+                  MTP CR Ticket Number (Optional)
+                </label>
+                <input
+                  type="text"
+                  className="mt-2 w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  placeholder="Enter MTP CR Ticket Number"
+                  value={mtpNumberValue ?? ''}
+                  onChange={(event) => onMtpNumberChange?.(event.target.value)}
+                />
+                <label className="mt-4 block text-[11px] uppercase tracking-[0.2em] text-violet-300">
+                  MTP CR Link (Optional)
+                </label>
+                <input
+                  type="url"
+                  className="mt-2 w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                  placeholder="https://..."
+                  value={mtpLinkValue ?? ''}
+                  onChange={(event) => onMtpLinkChange?.(event.target.value)}
+                />
+              </>
+            )}
             {showScheduledLink && (
               <>
                 <label className="mt-4 block text-[11px] uppercase tracking-[0.2em] text-violet-300">
