@@ -1,10 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import Checklist from './components/checklist/Checklist'
-import TimeTravelPanel from './components/dev/TimeTravelPanel'
-import HistoryPage from './components/history/HistoryPage'
 import MainHeader from './components/layout/MainHeader'
-import ChangeTypeModal from './components/modals/ChangeTypeModal'
-import TaskRequirementModal from './components/modals/TaskRequirementModal'
 import SideNav from './components/layout/SideNav'
 import RightSidebar from './components/sidebar/RightSidebar'
 import { buildDefaultTasks, getTaskDefinition, taskDefinitions } from './config/releaseTasks'
@@ -15,6 +11,11 @@ import {
   STANDARD_CHANGE_REQUEST,
 } from './config/releaseLinks'
 import type { TaskItem, TaskStatus } from './config/releaseTasks'
+
+const HistoryPage = lazy(() => import('./components/history/HistoryPage'))
+const TimeTravelPanel = lazy(() => import('./components/dev/TimeTravelPanel'))
+const TaskRequirementModal = lazy(() => import('./components/modals/TaskRequirementModal'))
+const ChangeTypeModal = lazy(() => import('./components/modals/ChangeTypeModal'))
 
 function App() {
   const timeTravelEnabled = (import.meta.env.VITE_ENABLE_TIME_TRAVEL || '').toLowerCase() === 'true'
@@ -583,7 +584,9 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <TimeTravelPanel enabled={timeTravelEnabled} onNowChange={setOverrideNow} />
+      <Suspense fallback={null}>
+        <TimeTravelPanel enabled={timeTravelEnabled} onNowChange={setOverrideNow} />
+      </Suspense>
       <div className="flex min-h-screen w-full gap-4 px-4 py-6 md:gap-6 md:px-8">
         <SideNav activeView={activeView} onSelectView={setActiveView} />
 
@@ -634,60 +637,73 @@ function App() {
               </section>
             </>
           ) : (
-            <HistoryPage />
+            <Suspense
+              fallback={
+                <div className="flex min-h-[18rem] items-center justify-center rounded-2xl border border-slate-800 bg-slate-950/40">
+                  <div className="flex items-center gap-3 rounded-full border border-slate-800 bg-slate-900/80 px-4 py-2 text-xs text-slate-200">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-400/60 border-t-transparent" />
+                    Loading history view...
+                  </div>
+                </div>
+              }
+            >
+              <HistoryPage />
+            </Suspense>
           )}
         </main>
       </div>
-      <TaskRequirementModal
-        open={Boolean(requirementModal)}
-        title="Additional Info Required"
-        requirementLabel={requirementModal?.requirementLabel || ''}
-        helperLinkLabel={requirementModal?.helperLinkLabel}
-        helperLinkUrl={requirementModal?.helperLinkUrl}
-        instructionLabel={requirementModal?.instructionLabel}
-        instructionUrl={requirementModal?.instructionUrl}
-        instructionPrefix={requirementModal?.instructionPrefix}
-        showInputs={requirementModal?.showInputs}
-        value={requirementValue}
-        onChange={setRequirementValue}
-        linkValue={requirementLinkValue}
-        onLinkChange={setRequirementLinkValue}
-        mtpNumberValue={mtpCrTicketNumber}
-        onMtpNumberChange={setMtpCrTicketNumber}
-        mtpLinkValue={mtpCrTicketLink}
-        onMtpLinkChange={setMtpCrTicketLink}
-        scheduledLinkValue={scheduledReleaseLinkValue}
-        onScheduledLinkChange={setScheduledReleaseLinkValue}
-        showScheduledLink={requirementModal?.taskId === 'create-cr'}
-        showMtpCrFields={
-          requirementModal?.taskId === 'create-cr' && changeTypeOptions.includes('MTP')
-        }
-        onCancel={handleRequirementCancel}
-        onConfirm={handleRequirementConfirm}
-        confirmDisabled={
-          requirementModal?.showInputs !== false
-            ? !requirementValue.trim() ||
-              !requirementLinkValue.trim() ||
-              (requirementModal?.taskId === 'create-cr' &&
-                !scheduledReleaseLinkValue.trim())
-            : false
-        }
-      />
-      <ChangeTypeModal
-        open={changeTypeModalOpen}
-        value={selectedChangeType}
-        options={changeTypeOptions}
-        onChange={setSelectedChangeType}
-        onToggleOption={(option) =>
-          setChangeTypeOptions((current) =>
-            current.includes(option)
-              ? current.filter((item) => item !== option)
-              : [...current, option],
-          )
-        }
-        onCancel={handleChangeTypeCancel}
-        onConfirm={handleChangeTypeConfirm}
-      />
+      <Suspense fallback={null}>
+        <TaskRequirementModal
+          open={Boolean(requirementModal)}
+          title="Additional Info Required"
+          requirementLabel={requirementModal?.requirementLabel || ''}
+          helperLinkLabel={requirementModal?.helperLinkLabel}
+          helperLinkUrl={requirementModal?.helperLinkUrl}
+          instructionLabel={requirementModal?.instructionLabel}
+          instructionUrl={requirementModal?.instructionUrl}
+          instructionPrefix={requirementModal?.instructionPrefix}
+          showInputs={requirementModal?.showInputs}
+          value={requirementValue}
+          onChange={setRequirementValue}
+          linkValue={requirementLinkValue}
+          onLinkChange={setRequirementLinkValue}
+          mtpNumberValue={mtpCrTicketNumber}
+          onMtpNumberChange={setMtpCrTicketNumber}
+          mtpLinkValue={mtpCrTicketLink}
+          onMtpLinkChange={setMtpCrTicketLink}
+          scheduledLinkValue={scheduledReleaseLinkValue}
+          onScheduledLinkChange={setScheduledReleaseLinkValue}
+          showScheduledLink={requirementModal?.taskId === 'create-cr'}
+          showMtpCrFields={
+            requirementModal?.taskId === 'create-cr' && changeTypeOptions.includes('MTP')
+          }
+          onCancel={handleRequirementCancel}
+          onConfirm={handleRequirementConfirm}
+          confirmDisabled={
+            requirementModal?.showInputs !== false
+              ? !requirementValue.trim() ||
+                !requirementLinkValue.trim() ||
+                (requirementModal?.taskId === 'create-cr' &&
+                  !scheduledReleaseLinkValue.trim())
+              : false
+          }
+        />
+        <ChangeTypeModal
+          open={changeTypeModalOpen}
+          value={selectedChangeType}
+          options={changeTypeOptions}
+          onChange={setSelectedChangeType}
+          onToggleOption={(option) =>
+            setChangeTypeOptions((current) =>
+              current.includes(option)
+                ? current.filter((item) => item !== option)
+                : [...current, option],
+            )
+          }
+          onCancel={handleChangeTypeCancel}
+          onConfirm={handleChangeTypeConfirm}
+        />
+      </Suspense>
     </div>
   )
 }

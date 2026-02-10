@@ -15,7 +15,8 @@ type HistoryRelease = {
 
 type HistoryEntry = {
   key: string
-  data: HistoryRelease
+  weekStart: string
+  weekEnd: string
 }
 
 const STATUS_LABELS: TaskStatus[] = ['Not started', 'In progress', 'Done']
@@ -46,44 +47,71 @@ const getWeekRange = (now: Date) => {
   }
 }
 
-const historyModules = import.meta.glob('../../historical/*.json', { eager: true }) as Record<
+const historyLoaders = import.meta.glob('../../historical/*.json') as Record<
   string,
-  { default: HistoryRelease }
+  () => Promise<{ default: HistoryRelease }>
 >
 
+const parseWeekRangeFromKey = (key: string) => {
+  const match = key.match(/history-(\d{4}-\d{2}-\d{2})_to_(\d{4}-\d{2}-\d{2})\.json$/)
+  if (!match) {
+    return null
+  }
+  return {
+    weekStart: match[1],
+    weekEnd: match[2],
+  }
+}
+
 export default function HistoryPage() {
-  const [isLoading, setIsLoading] = useState(true)
+  const [isBootLoading, setIsBootLoading] = useState(true)
+  const [isFilterLoading, setIsFilterLoading] = useState(false)
+  const [isActiveLoading, setIsActiveLoading] = useState(false)
   const [captainFilter, setCaptainFilter] = useState('')
   const loadingDelayMs = Number(import.meta.env.VITE_LOADING_DELAY_MS || 0)
-  const releases = useMemo(() => {
+  const baseEntries = useMemo(() => {
     const { startDate, endDate } = getWeekRange(new Date())
-    const normalizedFilter = captainFilter.trim().toLowerCase()
-    const entries: HistoryEntry[] = Object.entries(historyModules)
-      .map(([key, module]) => ({ key, data: module.default }))
-      .filter((entry) => entry.data?.weekStart && entry.data?.weekEnd)
-      .filter((entry) => !(entry.data.weekStart === startDate && entry.data.weekEnd === endDate))
-      .filter((entry) => {
-        if (!normalizedFilter) {
-          return true
+    const entries: HistoryEntry[] = Object.keys(historyLoaders)
+      .map((key) => {
+        const range = parseWeekRangeFromKey(key)
+        if (!range) {
+          return null
         }
-        const captains = entry.data.releaseCaptains ?? []
-        return captains.some((name) => name.toLowerCase().includes(normalizedFilter))
+        return { key, weekStart: range.weekStart, weekEnd: range.weekEnd }
       })
-      .sort((a, b) => b.data.weekStart.localeCompare(a.data.weekStart))
+      .filter((entry): entry is HistoryEntry => Boolean(entry))
+      .filter((entry) => !(entry.weekStart === startDate && entry.weekEnd === endDate))
+      .sort((a, b) => b.weekStart.localeCompare(a.weekStart))
     return entries
-  }, [captainFilter])
+  }, [])
 
-  const [activeKey, setActiveKey] = useState<string | null>(releases[0]?.key ?? null)
+  const [releaseCache, setReleaseCache] = useState<Record<string, HistoryRelease>>({})
+  const normalizedFilter = captainFilter.trim().toLowerCase()
+  const filteredEntries = useMemo(() => {
+    if (!normalizedFilter) {
+      return baseEntries
+    }
+    return baseEntries.filter((entry) => {
+      const release = releaseCache[entry.key]
+      if (!release) {
+        return false
+      }
+      const captains = release.releaseCaptains ?? []
+      return captains.some((name) => name.toLowerCase().includes(normalizedFilter))
+    })
+  }, [baseEntries, normalizedFilter, releaseCache])
+
+  const [activeKey, setActiveKey] = useState<string | null>(baseEntries[0]?.key ?? null)
 
   useEffect(() => {
     let isMounted = true
     const run = async () => {
-      setIsLoading(true)
+      setIsBootLoading(true)
       if (import.meta.env.DEV && loadingDelayMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, loadingDelayMs))
       }
       if (isMounted) {
-        setIsLoading(false)
+        setIsBootLoading(false)
       }
     }
     run()
@@ -92,10 +120,99 @@ export default function HistoryPage() {
     }
   }, [loadingDelayMs])
 
+  useEffect(() => {
+    if (!normalizedFilter) {
+      return
+    }
+    const missing = baseEntries.filter((entry) => !releaseCache[entry.key])
+    if (missing.length === 0) {
+      return
+    }
+    let isMounted = true
+    setIsFilterLoading(true)
+    Promise.all(
+      missing.map((entry) =>
+        historyLoaders[entry.key]?.()
+          .then((module) => ({ key: entry.key, data: module.default }))
+          .catch(() => null),
+      ),
+    )
+      .then((results) => {
+        if (!isMounted) {
+          return
+        }
+        setReleaseCache((prev) => {
+          const next = { ...prev }
+          results.forEach((result) => {
+            if (result && !next[result.key]) {
+              next[result.key] = result.data
+            }
+          })
+          return next
+        })
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsFilterLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [baseEntries, normalizedFilter, releaseCache])
+
+  useEffect(() => {
+    if (!activeKey) {
+      return
+    }
+    if (releaseCache[activeKey]) {
+      return
+    }
+    const loader = historyLoaders[activeKey]
+    if (!loader) {
+      return
+    }
+    let isMounted = true
+    setIsActiveLoading(true)
+    loader()
+      .then((module) => {
+        if (!isMounted) {
+          return
+        }
+        setReleaseCache((prev) =>
+          prev[activeKey] ? prev : { ...prev, [activeKey]: module.default },
+        )
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsActiveLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [activeKey, releaseCache])
+
+  useEffect(() => {
+    if (filteredEntries.length === 0) {
+      if (activeKey !== null) {
+        setActiveKey(null)
+      }
+      return
+    }
+    if (!activeKey || !filteredEntries.some((entry) => entry.key === activeKey)) {
+      setActiveKey(filteredEntries[0].key)
+    }
+  }, [activeKey, filteredEntries])
+
   const activeRelease = useMemo(
-    () => releases.find((entry) => entry.key === activeKey)?.data,
-    [activeKey, releases],
+    () => (activeKey ? releaseCache[activeKey] : undefined),
+    [activeKey, releaseCache],
   )
+
+  const isLoading = isBootLoading || isFilterLoading || isActiveLoading
 
   const tasks = activeRelease?.tasks ?? []
   const grouped = STATUS_LABELS.map((status) => ({
@@ -149,7 +266,7 @@ export default function HistoryPage() {
           />
         </div>
         <div className="space-y-2">
-          {releases.map((release) => (
+          {filteredEntries.map((release) => (
             <button
               key={release.key}
               className={`w-full rounded-lg border px-3 py-2 text-left text-xs transition ${
@@ -163,7 +280,7 @@ export default function HistoryPage() {
                 Week
               </div>
               <div className="mt-1 text-sm font-medium">
-                {release.data.weekStart} → {release.data.weekEnd}
+                {release.weekStart} → {release.weekEnd}
               </div>
             </button>
           ))}
@@ -189,6 +306,8 @@ export default function HistoryPage() {
                   : 'Not set'}
               </p>
             </div>
+          ) : isActiveLoading ? (
+            <p className="mt-3 text-xs text-slate-400">Loading release details...</p>
           ) : (
             <p className="mt-3 text-xs text-slate-400">No release selected.</p>
           )}
