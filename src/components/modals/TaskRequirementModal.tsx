@@ -7,6 +7,7 @@ type TaskRequirementModalProps = {
   instructionLabel?: string
   instructionUrl?: string
   instructionPrefix?: string
+  instructionSuffix?: string
   showInputs?: boolean
   value: string
   onChange: (value: string) => void
@@ -20,6 +21,12 @@ type TaskRequirementModalProps = {
   onScheduledLinkChange?: (value: string) => void
   showScheduledLink?: boolean
   showMtpCrFields?: boolean
+  readonlyLabel?: string
+  readonlyMessage?: string
+  notesLabel?: string
+  notesValue?: string
+  onNotesChange?: (value: string) => void
+  confirmLabel?: string
   onCancel: () => void
   onConfirm: () => void
   confirmDisabled?: boolean
@@ -34,6 +41,7 @@ export default function TaskRequirementModal({
   instructionLabel,
   instructionUrl,
   instructionPrefix = 'Follow the instruction:',
+  instructionSuffix,
   showInputs = true,
   value,
   onChange,
@@ -47,6 +55,12 @@ export default function TaskRequirementModal({
   onScheduledLinkChange,
   showScheduledLink = false,
   showMtpCrFields = false,
+  readonlyLabel = 'Copy below message',
+  readonlyMessage,
+  notesLabel,
+  notesValue,
+  onNotesChange,
+  confirmLabel = 'Confirm',
   onCancel,
   onConfirm,
   confirmDisabled = false,
@@ -64,6 +78,19 @@ export default function TaskRequirementModal({
             Close
           </button>
         </div>
+        {readonlyMessage && (
+          <div className="mt-4">
+            <label className="block text-xs text-violet-300">
+              {readonlyLabel}
+            </label>
+            <textarea
+              className="mt-2 w-full resize-none rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-200"
+              rows={4}
+              value={readonlyMessage}
+              readOnly
+            />
+          </div>
+        )}
         {instructionLabel && instructionUrl && (
           <p className="mt-3 text-xs text-slate-300">
             {instructionPrefix}{' '}
@@ -75,7 +102,21 @@ export default function TaskRequirementModal({
             >
               {instructionLabel}
             </a>
+            {instructionSuffix ? ` ${instructionSuffix}` : null}
           </p>
+        )}
+        {notesLabel && typeof notesValue === 'string' && (
+          <div className="mt-4">
+            <label className="block text-xs text-violet-300">
+              {notesLabel}
+            </label>
+            <textarea
+              className="mt-2 w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-100"
+              rows={5}
+              value={notesValue}
+              onChange={(event) => onNotesChange?.(event.target.value)}
+            />
+          </div>
         )}
         {showInputs && (
           <>
@@ -155,7 +196,7 @@ export default function TaskRequirementModal({
             onClick={onConfirm}
             disabled={confirmDisabled}
           >
-            Confirm
+            {confirmLabel}
           </button>
           <button
             className="flex-1 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-800"

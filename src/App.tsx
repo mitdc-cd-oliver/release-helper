@@ -4,6 +4,8 @@ import MainHeader from './components/layout/MainHeader'
 import SideNav from './components/layout/SideNav'
 import RightSidebar from './components/sidebar/RightSidebar'
 import { buildDefaultTasks, getTaskDefinition, taskDefinitions } from './config/releaseTasks'
+import pivEmailTemplate from '../templates/email/PIV-email-template.html?raw'
+import { buildEmailContent, downloadEmailFile, getThisWeekThursdayPlaceholders } from './utils/email'
 import {
   NORMAL_CHANGE_REQUEST,
   RELEASE_COORDINATOR_ROSTER,
@@ -47,6 +49,7 @@ function App() {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
   }
   const weekRangeText = `Week: ${formatDate(weekStart)} - ${formatDate(weekEnd)}`
+  const releaseWeekText = `${formatDate(weekStart)} - ${formatDate(weekEnd)}`
 
   const isInWindow = now >= start && now <= end
   const durationMs = end.getTime() - start.getTime()
@@ -78,8 +81,12 @@ function App() {
         instructionLabel?: string
         instructionUrl?: string
         instructionPrefix?: string
-        metadataKey: 'cr' | 'readiness' | 'info'
+        instructionSuffix?: string
+        metadataKey: 'cr' | 'readiness' | 'info' | 'email'
         showInputs?: boolean
+        readonlyLabel?: string
+        readonlyMessage?: string
+        notesLabel?: string
       }
     | null
   >(null)
@@ -88,6 +95,7 @@ function App() {
   const [mtpCrTicketNumber, setMtpCrTicketNumber] = useState('')
   const [mtpCrTicketLink, setMtpCrTicketLink] = useState('')
   const [scheduledReleaseLinkValue, setScheduledReleaseLinkValue] = useState('')
+  const [emailInfoInput, setEmailInfoInput] = useState('')
   const [activeView, setActiveView] = useState<'current' | 'history'>('current')
   const [changeTypeModalOpen, setChangeTypeModalOpen] = useState(false)
   const [selectedChangeType, setSelectedChangeType] = useState<
@@ -152,6 +160,43 @@ function App() {
     const withChildren = status === 'In progress' ? ensureChildrenForTask(taskId, updated) : updated
     setTasks(withChildren)
     persistTasks(withChildren)
+  }
+
+  const updateTaskMetadata = (taskId: string, metadata: TaskItem['metadata']) => {
+    const updated = tasks.map((task) =>
+      task.id === taskId
+        ? {
+            ...task,
+            metadata: {
+              ...task.metadata,
+              ...metadata,
+            },
+          }
+        : task,
+    )
+    setTasks(updated)
+    persistTasks(updated)
+  }
+
+  const openPivApprovalEmailModal = (taskId: string, status: TaskStatus, storedInput = '') => {
+    const scheduledReleaseLink =
+      tasks.find((task) => task.id === 'create-cr')?.metadata?.scheduledReleaseLink || ''
+    setEmailInfoInput(storedInput)
+    setRequirementModal({
+      taskId,
+      status,
+      requirementLabel: '',
+      instructionLabel: 'Open',
+      instructionUrl: scheduledReleaseLink,
+      instructionPrefix: '2. Go to Scheduled Release page',
+      instructionSuffix: 'and ask Rovo to get tickets info',
+      metadataKey: 'email',
+      showInputs: false,
+      readonlyLabel: '1. Copy below message',
+      readonlyMessage:
+        'Get info from all work items in this page using format below and then convert to csv format:\nitemLink | itemTitle | itemAssignee',
+      notesLabel: '3. Input the info and generate Email content',
+    })
   }
 
   const handleMove = (taskId: string, status: TaskStatus) => {
@@ -241,6 +286,11 @@ function App() {
         })
         return
       }
+      if (taskId === 'roster-piv-approval-email') {
+        applyTaskStatus(taskId, status)
+        openPivApprovalEmailModal(taskId, status, currentTask.metadata?.emailInfoInput || '')
+        return
+      }
     }
 
     applyTaskStatus(taskId, status)
@@ -254,13 +304,30 @@ function App() {
     setMtpCrTicketLink('')
     setSelectedChangeType('')
     setScheduledReleaseLinkValue('')
+    setEmailInfoInput('')
   }
 
   const handleRequirementConfirm = () => {
     if (!requirementModal) {
       return
     }
-    if (requirementModal.metadataKey === 'info') {
+    if (requirementModal.metadataKey === 'email') {
+      const trimmed = emailInfoInput.trim()
+      if (trimmed) {
+        const { releaseThursdayYYYYMMDD, releaseThursdayMMM_D_YYYY } =
+          getThisWeekThursdayPlaceholders(now)
+        const content = buildEmailContent(pivEmailTemplate, {
+          releaseWeekText,
+          csvText: trimmed,
+          releaseThursdayYYYYMMDD,
+          releaseThursdayMMM_D_YYYY,
+        })
+        downloadEmailFile(content, releaseWeekText)
+        updateTaskMetadata(requirementModal.taskId, { emailInfoInput: trimmed })
+        setStartStatus('success')
+        setStartMessage('Email file downloaded')
+      }
+    } else if (requirementModal.metadataKey === 'info') {
       applyTaskStatus(requirementModal.taskId, requirementModal.status)
     } else {
       const value = requirementValue.trim()
@@ -309,6 +376,7 @@ function App() {
     setMtpCrTicketLink('')
     setSelectedChangeType('')
     setScheduledReleaseLinkValue('')
+    setEmailInfoInput('')
   }
 
   const handleChangeTypeCancel = () => {
@@ -400,6 +468,17 @@ function App() {
       instructionUrl: RELEASE_READINESS_GUIDE.url,
       metadataKey: 'readiness',
     })
+  }
+
+  const handleEditPivApprovalEmail = (taskId: string) => {
+    const currentTask = tasks.find((task) => task.id === taskId)
+    if (!currentTask || currentTask.status !== 'In progress') {
+      return
+    }
+    if (taskId !== 'roster-piv-approval-email') {
+      return
+    }
+    openPivApprovalEmailModal(taskId, currentTask.status, currentTask.metadata?.emailInfoInput || '')
   }
 
   const taskTitleById = useMemo(() => {
@@ -648,6 +727,7 @@ function App() {
                   onMove={handleMove}
                   onEditCrTicket={handleEditCrTicket}
                   onEditReadinessTicket={handleEditReadinessTicket}
+                  onEditPivApprovalEmail={handleEditPivApprovalEmail}
                 />
                 <RightSidebar
                   isInWindow={isInWindow}
@@ -684,7 +764,14 @@ function App() {
           instructionLabel={requirementModal?.instructionLabel}
           instructionUrl={requirementModal?.instructionUrl}
           instructionPrefix={requirementModal?.instructionPrefix}
+          instructionSuffix={requirementModal?.instructionSuffix}
           showInputs={requirementModal?.showInputs}
+          readonlyLabel={requirementModal?.readonlyLabel}
+          readonlyMessage={requirementModal?.readonlyMessage}
+          notesLabel={requirementModal?.notesLabel}
+          notesValue={emailInfoInput}
+          onNotesChange={setEmailInfoInput}
+          confirmLabel={requirementModal?.taskId === 'roster-piv-approval-email' ? '4 Generate' : undefined}
           value={requirementValue}
           onChange={setRequirementValue}
           linkValue={requirementLinkValue}
@@ -702,12 +789,14 @@ function App() {
           onCancel={handleRequirementCancel}
           onConfirm={handleRequirementConfirm}
           confirmDisabled={
-            requirementModal?.showInputs !== false
-              ? !requirementValue.trim() ||
-                !requirementLinkValue.trim() ||
-                (requirementModal?.taskId === 'create-cr' &&
-                  !scheduledReleaseLinkValue.trim())
-              : false
+            requirementModal?.taskId === 'roster-piv-approval-email'
+              ? !emailInfoInput.trim()
+              : requirementModal?.showInputs !== false
+                ? !requirementValue.trim() ||
+                  !requirementLinkValue.trim() ||
+                  (requirementModal?.taskId === 'create-cr' &&
+                    !scheduledReleaseLinkValue.trim())
+                : false
           }
         />
         <ChangeTypeModal

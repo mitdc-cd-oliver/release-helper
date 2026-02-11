@@ -30,6 +30,7 @@ export type TaskItem = {
     scheduledReleaseLink?: string
     readinessTicketNumber?: string
     readinessTicketLink?: string
+    emailInfoInput?: string
   }
 }
 

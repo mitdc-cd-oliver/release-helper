@@ -8,6 +8,7 @@ type ChecklistProps = {
   allowDoneWithIncompleteChildrenById: Record<string, boolean>
   onEditCrTicket?: (taskId: string) => void
   onEditReadinessTicket?: (taskId: string) => void
+  onEditPivApprovalEmail?: (taskId: string) => void
 }
 
 const STATUS_LABELS: TaskStatus[] = [
@@ -29,6 +30,7 @@ export default function Checklist({
   allowDoneWithIncompleteChildrenById,
   onEditCrTicket,
   onEditReadinessTicket,
+  onEditPivApprovalEmail,
 }: ChecklistProps) {
   const [activeStatus, setActiveStatus] = useState<TaskStatus | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -209,6 +211,15 @@ export default function Checklist({
                       onClick={() => onEditReadinessTicket?.(item.id)}
                     >
                       Edit ticket info
+                    </button>
+                  )}
+                  {item.id === 'roster-piv-approval-email' && item.status === 'In progress' && (
+                    <button
+                      type="button"
+                      className="text-xs text-violet-300 hover:text-violet-200"
+                      onClick={() => onEditPivApprovalEmail?.(item.id)}
+                    >
+                      Generate email
                     </button>
                   )}
                 </div>
